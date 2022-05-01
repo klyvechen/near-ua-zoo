@@ -11,24 +11,9 @@ Buffer.from('anything','base64');
 window.Buffer = window.Buffer || require("buffer").Buffer;
 
 let nfts = {}
-let nftContractName = 'klyve-hack-nft2.klyve-hack.testnet';
+let nftContractName = 'ua-zoo-prj.klyve-hack.testnet';
 
 const ONE_NEAR = 1000000000000000000000000;
-
-async function mintByNear(amount) {
-  const walletId = util.getWallet().getAccountId()
-  const yoctoAmount = (amount * 1000000000000000000000000).toLocaleString('fullwide', { useGrouping: false })
-  const num = Math.floor((Math.random() * 100)) % 4
-  console.log('rand num', num)
-  await util.call(nftContractName, 'nft_mint_pay_by_rand', [{ account_id: walletId, num: num }, "300000000000000", yoctoAmount])
-}
-
-async function connectNFtContract() {
-  const viewMethods = ['nft_total_supply', 'nft_tokens', 'nft_supply_for_owner', 'nft_tokens_for_owner']
-  const changeMethods = ['nft_mint_pay', 'nft_mint_by_ft', 'nft_mint_by_ft_rand', 'nft_mint_pay_by_rand']
-  await util.connectContract(nftContractName, viewMethods, changeMethods)
-}
-
 
 async function handleLikelyNFTs(setShowNfts) {
   const nftContracts = await util.getLikelyNFTs()
@@ -53,13 +38,7 @@ async function handleLikelyNFTs(setShowNfts) {
 async function initPage(setShowNfts, setConnected) {
   setConnected(util.isConnected())
   handleLikelyNFTs(setShowNfts)
-  await connectNFtContract()
 }
-
-const onUploadToServer = (image, succResHandler)=>{
-  axiosUtil.postImage('/api/uploadImage', {"image": image}, succResHandler)
-}
-
 
 export default function ShowNFTs() {
 
@@ -112,28 +91,15 @@ export default function ShowNFTs() {
             <div className="border border-secondary">
               <div className="border border-secondary">
                 <div className="row">
-
-                  {/* <div className="col-md-4 col-sm-12">
-                    <Button variant="alert alert-success" id="mint" onClick={()=> {
-                      mintByNear(amountToMint)
-                    }}>Mint By Near</Button>
-                  </div> */}
-                  <div className="col-md-8 col-sm-12">
-                    {/* <small style={{fontSize:"20px"}} >
-                      use
-                      <input style={{width: "50px", textAlign: "center"}} type="text" value={amountToMint} onChange={(e)=>{setAmountToMint(e.target.value)}}/>
-                      N to mint 
-                    </small>  */}
-                  </div>
                   <div className="col-12" style={{fontSize:"16px", textAlign: "left"}}>
-                    <small>
+                    <p>
                      This is a website to create an NTF collection for Ukraine Zoo animals.
                      Below is the utility to upload the pic,
                      and the pic will transfer to secondary market for sale.<br/>
                      The 70 % of the price of the first sale will getting into the UA Zoo DAO Fund,
                      25 % will reward the picture provider,
                      and the rest amount will pay as the transaction fee to the contract itself.
-                    </small>
+                    </p>
                   </div>
                   <br/>
                 </div>
@@ -142,7 +108,7 @@ export default function ShowNFTs() {
                 <div className="row">
                   <div className="col-12" style={{fontSize: "16px", textAlign: "left"}}>
                     {messages.map((msg, i) =>{
-                      return (<><small style={{wordBreak: "break-all", fontSize: "16px", textAlign: "left"}}>{i+1}. {msg}</small><br/></>)
+                      return (<><small key={"msg-" + i} style={{wordBreak: "break-all", fontSize: "16px", textAlign: "left"}}>{i+1}. {msg}</small><br/></>)
                     })}
                   </div>
                 </div>
@@ -163,7 +129,7 @@ export default function ShowNFTs() {
                         <img className="card-img-top" alt="Card image cap" src={n.metadata.media} key={'nft' + i}></img>
                         <div className="card-body">
                           <h5 className="card-title text-primary">{n.metadata.title}</h5>
-                          <p className="card-text text-secondary">{n.metadata.description}</p>
+                          <small className="card-text text-secondary">{n.metadata.description}</small>
                           {/* <a href="#" className="btn btn-primary">Go somewhere</a> */}
                         </div>
                       </div>

@@ -1,3 +1,4 @@
+import { util } from './utils/util';
 import React from 'react';
 import { Button } from 'react-bootstrap';
 import ImageUploading from 'react-images-uploading';
@@ -7,6 +8,23 @@ import axiosUtil from './utils/axiosUtil';
 /// https://codesandbox.io/s/react-images-uploading-demo-u0khz
 
 // let onUploadToServer;
+
+let nftContractName = 'ua-zoo-prj.klyve-hack.testnet';
+
+const ONE_NEAR = 1000000000000000000000000;
+
+async function connectNFtContract() {
+  const viewMethods = ['nft_total_supply', 'nft_tokens', 'nft_supply_for_owner', 'nft_tokens_for_owner']
+  const changeMethods = ['nft_mint']
+  await util.connectContract(nftContractName, viewMethods, changeMethods)
+}
+
+
+async function mintWithCid(cid) {
+  connectNFtContract()
+  const yoctoAmount = (1).toLocaleString('fullwide', { useGrouping: false })
+  await util.call(nftContractName, 'nft_mint', [{ cid: cid }, "300000000000000", yoctoAmount])
+}
 
 export default function ImageUploader(messages) {
   const [images, setImages] = React.useState([]);
@@ -29,6 +47,7 @@ export default function ImageUploader(messages) {
     console.log(res, messages)
     const msg = `The uploading is completed, please check the url: https://${res.data.cid}.ipfs.nftstorage.link`;
     theSetMessages([...theMessages, beforeMsg, msg])
+    mintWithCid(res.data.cid)
   }
 
  
