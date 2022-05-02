@@ -1,5 +1,6 @@
 import { util } from './utils/util';
 import axiosUtil from './utils/axiosUtil';
+import { Link } from "react-router-dom";
 import './App.css';
 import React, { useEffect, useState } from 'react';
 import { Buffer } from 'buffer';
@@ -10,10 +11,40 @@ import ImageUploader from './ImageUploader';
 Buffer.from('anything','base64');
 window.Buffer = window.Buffer || require("buffer").Buffer;
 
-let nfts = {}
 let nftContractName = 'ua-zoo-prj.klyve-hack.testnet';
+let marketContractName = 'market.klyve-hack.testnet';
 
 const ONE_NEAR = 1000000000000000000000000;
+
+// ear call ua-zoo-prj.klyve-hack.testnet nft_approve '{"token_id":"1","account_id":"market.klyve-hack.testnet",
+// "msg":"{\"token_type\":\"\",\"sale_conditions\":{}}"}' --accountId klyve-hack.testnet --deposit 1
+async function toSale(tokenId, price) {
+  // const amount = (0.5 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false });
+  await connectMarket()
+  const walletId = util.getWallet().getAccountId()
+  const storageBalance = await util.call(marketContractName, 'storage_balance_of', [{ account_id: walletId }])
+  const storageMinimumBalance = await util.call(marketContractName, 'storage_minimum_balance', [{}])
+
+  if (storageBalance < storageMinimumBalance) {
+    const depositStorageAmount = (0.025 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false });
+    await util.call(marketContractName, 'storage_deposit', [{}, "300000000000000", depositStorageAmount])
+  }
+  const args = {"token_id": tokenId,"account_id": marketContractName, "msg":"{\"market_type\":\"sale\",\"price\":\"5\"}"};
+  await util.call(nftContractName, 'nft_approve', [args, "300000000000000", "1"])
+}
+
+async function connectNftContract() {
+  const viewNftMethods = ['nft_total_supply', 'nft_tokens', 'nft_supply_for_owner', 'nft_tokens_for_owner']
+  const changeNftMethods = ['nft_approve']
+  await util.connectContract(nftContractName, viewNftMethods, changeNftMethods)
+}
+
+async function connectMarket() {
+  const marketViewNftMethods = ['get_sales_by_nft_token_type','storage_balance_of', 'storage_minimum_balance']
+  const marketChangeNftMethods = ['storage_deposit']
+  await util.connectContract(marketContractName, marketViewNftMethods, marketChangeNftMethods)
+}
+
 
 async function handleLikelyNFTs(setShowNfts) {
   const nftContracts = await util.getLikelyNFTs()
@@ -21,18 +52,12 @@ async function handleLikelyNFTs(setShowNfts) {
     return value !== nftContractName;
   });
   filtered = [nftContractName, ...filtered]
-  const viewNftMethods = ['nft_total_supply', 'nft_tokens', 'nft_supply_for_owner', 'nft_tokens_for_owner']
-  const changeNftMethods = []
+  await connectNftContract()
   const walletId = util.getWallet().getAccountId()
-  for (var c of filtered) {
-    await util.connectContract(c, viewNftMethods, changeNftMethods)
-    nfts[c] = await util.call(c, 'nft_tokens_for_owner', [{ account_id: walletId }])
-  }
-  let show = []
-  for (var prop in nfts) {
-    show = [...show, ...nfts[prop]]
-  }
-  setShowNfts(show)
+  const nftList = await util.call(nftContractName, 'nft_tokens_for_owner', [{ account_id: walletId }])
+  await connectMarket()
+  console.log(nftList)
+  setShowNfts(nftList)
 }
 
 async function initPage(setShowNfts, setConnected) {
@@ -55,23 +80,36 @@ export default function ShowNFTs() {
   }, [connected])
   return (
     <div className="App">
+      <div className="container" style={{width:"60%"}}>
+        <nav className="navbar navbar-expand-lg">
+          <div className="d-flex flex-row">
+            <Link className="navbar-brand" to="/market"><h4>market</h4></Link>
+            <Link className="navbar-brand" to="/mint"><h4>mint</h4></Link>
+          </div>
+          {connected &&
+            <Button variant="alert alert-success" id="btn" 
+              onClick={()=> {
+                  util.signOut()
+                  setConnected(false)
+                  setShowNfts([])
+              }}>"Disconnect" 
+            </Button>
+          }
+        </nav>
+      </div>
       <header className="App-header">
         {/* <img src={logo} className="App-logo" alt="logo" /> */}
         <div className={connected ? "d-flex flex-row" : "d-flex flex-column"}>
         <h2 style={{color: "teal"}}>Near Hack (klyve)</h2> 
-          {connected ? <>&nbsp;&nbsp;</> : <></>}
           <div>
-            <Button variant="alert alert-success" id="btn" 
-              onClick={()=> {
-                if (!connected) {
-                  util.signIn();
-                } else {
-                  util.signOut()
-                  setConnected(false)
-                  setShowNfts([])
-                }
-              }}>{!connected ? "Sign In": "Disconnect" }
-            </Button>
+            {connected ? <>&nbsp;&nbsp;</> : <></>}
+            {!connected &&             
+              <Button variant="alert alert-success" id="btn" 
+                onClick={()=> {
+                    util.signIn();    
+                }}>"Sign In"  
+              </Button>
+            }
           </div>
         </div> 
         <div>
@@ -129,10 +167,11 @@ export default function ShowNFTs() {
                         <img className="card-img-top" alt="Card image cap" src={n.metadata.media} key={'nft' + i}></img>
                         <div className="card-body">
                           <h5 className="card-title text-primary">{n.metadata.title}</h5>
-                          <small className="card-text text-secondary">{n.metadata.description}</small>
+                          {/* <small className="card-text text-secondary">{n.metadata.description}</small> */}
                           {/* <a href="#" className="btn btn-primary">Go somewhere</a> */}
                         </div>
                       </div>
+                      <Button variant="alert alert-success" onClick={(e)=>{ toSale(n.token_id)}}>Sale</Button>
                     </div>)
                 })}
               </div>

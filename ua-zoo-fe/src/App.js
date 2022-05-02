@@ -1,5 +1,6 @@
 import Home from './Home';
 import UaZoo from './UaZoo';
+import Market from './Market';
 
 import './App.css';
 import {
@@ -19,7 +20,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<UaZoo/>}></Route>
-          <Route path="/ua-zoo" element={<UaZoo/>}></Route>
+          <Route path="/mint" element={<UaZoo/>}></Route>
+          <Route path="/market" element={<Market/>}></Route>
         </Routes>
       </BrowserRouter>
     </div>

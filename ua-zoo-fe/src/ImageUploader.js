@@ -21,7 +21,7 @@ async function connectNFtContract() {
 
 
 async function mintWithCid(cid) {
-  connectNFtContract()
+  await connectNFtContract()
   const yoctoAmount = (1).toLocaleString('fullwide', { useGrouping: false })
   await util.call(nftContractName, 'nft_mint', [{ cid: cid }, "300000000000000", yoctoAmount])
 }
