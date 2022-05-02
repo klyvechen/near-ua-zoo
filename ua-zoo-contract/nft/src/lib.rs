@@ -23,9 +23,13 @@ use near_contract_standards::non_fungible_token::NonFungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{ LazyOption, UnorderedMap };
 use near_sdk::{
-    env, near_bindgen, ext_contract, log, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue, Balance, PromiseResult, Gas
+    assert_one_yocto, env, near_bindgen, ext_contract, log, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue, Balance, PromiseResult, Gas
 };
+use near_sdk::json_types::U128;
+use crate::payouts::{Payouts, Payout};
+use std::collections::HashMap;
 
+mod payouts;
 
 // near_sdk::setup_alloc!();
 
@@ -131,6 +135,33 @@ impl Contract {
         self.tokens.internal_mint(token_id, receiver_id, Some(token_metadata))
     }
 }
+
+#[near_bindgen]
+impl Payouts for Contract {
+
+    #[payable]
+    fn nft_transfer_payout(
+          &mut self,
+          receiver_id: AccountId,
+          token_id: String,
+          approval_id: u64,
+          memo: String,
+          balance: U128,
+          max_len_payout: u32,
+    ) -> Payout {
+      assert_one_yocto();
+      let payout = self.nft_payout(token_id.clone(), balance, 1000);
+      self.nft_transfer(receiver_id, token_id, Some(approval_id), None);
+      payout
+    }
+
+    fn nft_payout(&self, token_id: String, balance: U128, max_len_payout: u32) -> Payout {
+        Payout {
+            payout: HashMap::new(),
+        }
+    }
+}
+    
 
 near_contract_standards::impl_non_fungible_token_core!(Contract, tokens);
 near_contract_standards::impl_non_fungible_token_approval!(Contract, tokens);
