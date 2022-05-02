@@ -156,9 +156,20 @@ impl Payouts for Contract {
     }
 
     fn nft_payout(&self, token_id: String, balance: U128, max_len_payout: u32) -> Payout {
-        Payout {
-            payout: HashMap::new(),
-        }
+        let yoctoBalance = u128::from(balance);
+        let mut payoutMap: HashMap<AccountId, U128> = HashMap::new();
+        let ua_zoo_dao = "ua-zoo-dao.testnet".to_string();
+        let owner_id = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        let contract_id = env::current_account_id();
+        let to_ua_zoo = (yoctoBalance as f64 * 0.7) as u128;
+        let to_owner = (yoctoBalance as f64 * 0.25) as u128;
+        let to_contract = yoctoBalance - to_ua_zoo - to_owner;
+        payoutMap.insert(AccountId::new_unchecked(ua_zoo_dao), U128(to_ua_zoo));
+        payoutMap.insert(owner_id, U128(to_owner));
+        payoutMap.insert(contract_id, U128(to_contract));
+
+        payoutMap
+    
     }
 }
     
