@@ -106,10 +106,7 @@ impl Contract {
 
         let sender_id = env::predecessor_account_id();
         let contract_and_token_id = format!("{}{}{}", nft_contract_id, DELIMETER, token_id);
-        let mut sale = self
-            .sales
-            .get(&contract_and_token_id)
-            .expect("No sale in nft_buy");
+        let mut sale = self.sales.get(&contract_and_token_id).expect("No sale in nft_buy");
 
         assert_ne!(sale.owner_id, sender_id, "Cannot buy your own sale.");
         let price = U128(sale.price);

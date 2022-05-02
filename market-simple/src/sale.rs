@@ -221,20 +221,25 @@ impl Contract {
         };
         // checking for payout information
         let payout_option = promise_result_as_success().and_then(|value| {
+            log!("payout_option {}", String::from_utf8(value.clone()).unwrap());
             // None means a bad payout from bad NFT contract
             near_sdk::serde_json::from_slice::<Payout>(&value)
                 .ok()
                 .and_then(|payout| {
                     // gas to do 10 FT transfers (and definitely 10 NEAR transfers)
                     if payout.len() + sale.bids.len() > 10 || payout.is_empty() {
+                        log!("payout first if");
                         env::log(format!("Cannot have more than 10 royalties and sale.bids refunds").as_bytes());
                         None
                     } else {
                         // TODO off by 1 e.g. payouts are fractions of 3333 + 3333 + 3333
                         let mut remainder = price.0;
+                        log!("payout second if");
                         for &value in payout.values() {
+                            log!("value: {:?}", value);
                             remainder = remainder.checked_sub(value.0)?;
                         }
+                        log!("remainder: {:?}", remainder);
                         if remainder == 0 || remainder == 1 {
                             Some(payout)
                         } else {
@@ -243,7 +248,11 @@ impl Contract {
                     }
                 })
         });
+        // for (receiver_id, amount) in payout_option.as_ref().unwrap() {
+        //     log!("receiver_id: {}, amount: {:?}", receiver_id, amount);
+        // }
         // is payout option valid?
+        log!("{:?}", payout_option);
         let payout = if let Some(payout_option) = payout_option {
             payout_option
         } else {
@@ -253,6 +262,9 @@ impl Contract {
             // leave function and return all FTs in ft_resolve_transfer
             return price;
         };
+        for (receiver_id, amount) in payout.clone() {
+            log!("receiver_id: {}, amount: {:?}", receiver_id, amount);
+        }
         // Going to payout everyone, first return all outstanding bids (accepted offer bid was already removed)
         self.refund_all_bids(&sale.bids);
 
