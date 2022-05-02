@@ -16,6 +16,9 @@ const testnetConfig = {
   explorerUrl: "https://explorer.testnet.near.org",
 }
 
+const nftContractName = 'ua-zoo-prj.klyve-hack.testnet';
+const marketContractName = 'market.klyve-hack.testnet';
+
 let near;
 let wallet;
 let status;
@@ -52,6 +55,10 @@ export const util = {
         const res = await fetch(url)
         console.log(res)
         return await res.json();
+    },
+
+    async getSaleMap() {
+        return {}
     },
 
     async init() {

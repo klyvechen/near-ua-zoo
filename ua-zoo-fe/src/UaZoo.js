@@ -1,5 +1,4 @@
 import { util } from './utils/util';
-import axiosUtil from './utils/axiosUtil';
 import { Link } from "react-router-dom";
 import './App.css';
 import React, { useEffect, useState } from 'react';
@@ -19,18 +18,21 @@ const ONE_NEAR = 1000000000000000000000000;
 // ear call ua-zoo-prj.klyve-hack.testnet nft_approve '{"token_id":"1","account_id":"market.klyve-hack.testnet",
 // "msg":"{\"token_type\":\"\",\"sale_conditions\":{}}"}' --accountId klyve-hack.testnet --deposit 1
 async function toSale(tokenId, price) {
-  // const amount = (0.5 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false });
-  await connectMarket()
+  const amount = (5 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false })
+  const args = {"token_id": tokenId,"account_id": marketContractName, "msg":"{\"market_type\":\"sale\",\"price\":\"" + amount + "\"}"};
+  await util.call(nftContractName, 'nft_approve', [args, "300000000000000", amount])
+}
+
+async function storageDeposit() {
+  const depositStorageAmount = (0.025 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false });
+  await util.call(marketContractName, 'storage_deposit', [{}, "300000000000000", depositStorageAmount])
+}
+
+async function checkNeedStorageDeposit() {
   const walletId = util.getWallet().getAccountId()
   const storageBalance = await util.call(marketContractName, 'storage_balance_of', [{ account_id: walletId }])
   const storageMinimumBalance = await util.call(marketContractName, 'storage_minimum_balance', [{}])
-
-  if (storageBalance < storageMinimumBalance) {
-    const depositStorageAmount = (0.025 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false });
-    await util.call(marketContractName, 'storage_deposit', [{}, "300000000000000", depositStorageAmount])
-  }
-  const args = {"token_id": tokenId,"account_id": marketContractName, "msg":"{\"market_type\":\"sale\",\"price\":\"5\"}"};
-  await util.call(nftContractName, 'nft_approve', [args, "300000000000000", "1"])
+  return storageBalance - storageMinimumBalance < 0;
 }
 
 async function connectNftContract() {
@@ -52,17 +54,19 @@ async function handleLikelyNFTs(setShowNfts) {
     return value !== nftContractName;
   });
   filtered = [nftContractName, ...filtered]
-  await connectNftContract()
   const walletId = util.getWallet().getAccountId()
   const nftList = await util.call(nftContractName, 'nft_tokens_for_owner', [{ account_id: walletId }])
-  await connectMarket()
   console.log(nftList)
   setShowNfts(nftList)
 }
 
-async function initPage(setShowNfts, setConnected) {
+async function initPage(setShowNfts, setConnected, setNeedStorageDeposit) {
+  await connectNftContract()
+  await connectMarket()
   setConnected(util.isConnected())
   handleLikelyNFTs(setShowNfts)
+  const needDS = await checkNeedStorageDeposit();
+  setNeedStorageDeposit(needDS)
 }
 
 export default function ShowNFTs() {
@@ -70,12 +74,13 @@ export default function ShowNFTs() {
   const [connected, setConnected] = useState(false);
   const [showNfts, setShowNfts] = useState([]);
   const [messages, setMessages] = useState(['Please upload and mint it']);
+  const [needStorageDeposit, setNeedStorageDeposit] = useState(false);
 
   useEffect(() => {
     console.log(util.getWallet())
     console.log(util.isConnected())
     if (util.getWallet().isSignedIn()) {
-      initPage(setShowNfts, setConnected)
+      initPage(setShowNfts, setConnected, setNeedStorageDeposit)
     }
   }, [connected])
   return (
@@ -133,10 +138,23 @@ export default function ShowNFTs() {
                     <p>
                      This is a website to create an NTF collection for Ukraine Zoo animals.
                      Below is the utility to upload the pic,
-                     and the pic will transfer to secondary market for sale.<br/>
+                     and the pic will transfer to secondary market for sale.</p>
+                    <p>
                      The 70 % of the price of the first sale will getting into the UA Zoo DAO Fund,
                      25 % will reward the picture provider,
                      and the rest amount will pay as the transaction fee to the contract itself.
+                    </p>
+                    <p>
+                      If you are the first time to attend the project, you need to click the start,
+                      after you mint your first nft from the site. 
+                    </p>
+                    <p>donation from the royolty is under processing.</p>
+                    <p>
+                      The ua-zoo-dao.testnet is the testing dao wallet which will received the 70% sales,
+                      You can check them by using the mnemonic phrase to check the fun has been in:
+                    </p>
+                    <p>
+                      bag swallow shed forest same useless era auto knee catalog breeze chef
                     </p>
                   </div>
                   <br/>
@@ -171,7 +189,10 @@ export default function ShowNFTs() {
                           {/* <a href="#" className="btn btn-primary">Go somewhere</a> */}
                         </div>
                       </div>
-                      <Button variant="alert alert-success" onClick={(e)=>{ toSale(n.token_id)}}>Sale</Button>
+                      {needStorageDeposit ? 
+                        <Button variant="alert alert-success" onClick={(e)=>{ storageDeposit()}}>Start</Button> :
+                        <Button variant="alert alert-success" onClick={(e)=>{ toSale(n.token_id)}}>Sale</Button>
+                      }
                     </div>)
                 })}
               </div>

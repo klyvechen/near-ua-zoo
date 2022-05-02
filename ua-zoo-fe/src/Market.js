@@ -14,12 +14,16 @@ const marketContractName = 'market.klyve-hack.testnet';
 
 const ONE_NEAR = 1000000000000000000000000;
 
-const saleMap = {}
-
 async function buyNft(token_id) {
   console.log(token_id)
-  const amount = (ONE_NEAR * saleMap[token_id]['price']).toLocaleString('fullwide', { useGrouping: false })
+  const amount = util.getSaleMap()[token_id]['price'].toLocaleString('fullwide', { useGrouping: false })
   await util.call(marketContractName, 'nft_buy', [{"nft_contract_id":nftContractName, "token_id": token_id}, "300000000000000", amount])
+}
+
+async function toSale(tokenId, price) {
+  const amount = (5 * ONE_NEAR).toLocaleString('fullwide', { useGrouping: false })
+  const args = {"token_id": tokenId,"account_id": marketContractName, "msg":"{\"market_type\":\"sale\",\"price\":\"" + amount + "\"}"};
+  await util.call(nftContractName, 'nft_approve', [args, "300000000000000", amount])
 }
 
 async function connectMarket() {
@@ -30,7 +34,7 @@ async function connectMarket() {
 
 async function connectNftContract() {
   const viewNftMethods = ['nft_total_supply', 'nft_tokens', 'nft_supply_for_owner', 'nft_tokens_for_owner']
-  const changeNftMethods = []
+  const changeNftMethods = ['nft_approve']
   await util.connectContract(nftContractName, viewNftMethods, changeNftMethods)
 }
 
@@ -38,7 +42,7 @@ async function listMarket(setContractNfts) {
   await connectMarket()
   const saleList = await util.call(marketContractName, 'get_sales_by_nft_contract_id', [{ "nft_contract_id": nftContractName, "from_index":"0","limit":10000 }])
   for (let s of saleList) {
-    saleMap[s.token_id] = s;
+    util.getSaleMap()[s.token_id] = s;
   }
   console.log('saleList', saleList)
   await connectNftContract()
@@ -116,6 +120,14 @@ export default function Market() {
               <div className="col-12" style={{fontSize:"16px", textAlign: "left"}}>
                 <p> Purchase the Ukraine Zoo NFT here.</p>
                 <p>70% of the first sale will go to the Ukraine-Zoo-DAO.</p>
+                <p>donation from the royolty is under processing.</p>
+                <p>
+                  The ua-zoo-dao.testnet is the testing dao wallet which will received the 70% sales,
+                  You can check them by using the mnemonic phrase to check the fun has been in:
+                </p>
+                <p>
+                  bag swallow shed forest same useless era auto knee catalog breeze chef
+                </p>
               </div>
               <br/>
             </div>
@@ -144,14 +156,14 @@ export default function Market() {
                         {/* <small className="card-text text-secondary">{n.metadata.description}</small> */}
                       </div>
                     </div>
-                    {n.owner_id == util.getWallet().getAccountId() ? ( saleMap[n.token_id] ? <p>Your sale</p> : null) : saleMap[n.token_id] &&
-                      <Button variant="alert alert-success" onClick={(e)=>{ buyNft(n.token_id)}}> Buy it</Button> }
+                    {n.owner_id == util.getWallet().getAccountId() ? ( util.getSaleMap()[n.token_id] ? <p>Your sale</p> 
+                        : <Button variant="alert alert-success" onClick={(e)=>{ toSale(n.token_id)}}>Sale</Button>) 
+                        : util.getSaleMap()[n.token_id] && <Button variant="alert alert-success" onClick={(e)=>{ buyNft(n.token_id)}}> Buy it</Button> }
                   </div>)
               })}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
